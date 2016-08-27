@@ -9,6 +9,7 @@
 
 // Library includes:
 #include <cassert>
+#include <cmath>
 
 Entity::Entity()
 : m_pSprite(0)
@@ -17,6 +18,9 @@ Entity::Entity()
 , m_velocityX(0.0f)
 , m_velocityY(0.0f)
 , m_dead(false)
+, m_canMoveLeft(1)
+, m_canMoveRight(1)
+, m_isJumping(0)
 {
 
 }
@@ -43,8 +47,22 @@ Entity::Process(float deltaTime)
 	m_pSprite->SetY(static_cast<int>(m_y));
 
 	// W02.1: Generic position update, based upon velocity (and time). DONE
-	m_x += m_velocityX * deltaTime;
+	if (m_canMoveLeft && m_velocityX < 0)
+	{
+		m_x += m_velocityX * deltaTime;
+	}
+	else if (m_canMoveRight && m_velocityX > 0)
+	{
+		m_x += m_velocityX * deltaTime;
+	}
+	else
+	{
+		m_velocityX = 0;
+	}
+	
+	if (!m_isJumping)
 	m_y += m_velocityY * deltaTime;
+	
 
 	if (m_x <= 0)
 	{
@@ -52,22 +70,17 @@ Entity::Process(float deltaTime)
 	}
 	else if (m_x >= (800 - m_pSprite->GetWidth()))
 	{
-		m_x = 800 - m_pSprite->GetWidth();
+		m_x = 800 - (float)m_pSprite->GetWidth();
 	}
-
-	/*if (m_y > 600 - m_pSprite->GetHeight())
-	{
-		m_y = 600 - m_pSprite->GetHeight();
-	}
-	else if (m_y <= 0)
-	{
-		m_y = 0;
-		m_velocityY = 0;
-	}*/
 
 	if (m_y <= 0)
 	{
 		m_y = 0;
+		m_velocityY = 0;
+	}
+	else if (m_y >= 600)
+	{
+		m_y = 600;
 		m_velocityY = 0;
 	}
 
@@ -81,20 +94,52 @@ Entity::Draw(BackBuffer& backBuffer)
 	m_pSprite->Draw(backBuffer);
 }
 
-bool
+Entity::Collision
 Entity::IsCollidingWith(Entity& e)
 {
-	// W02.3: Generic Entity Collision routine.
+	//  Minkowski sum
+	float w = 0.5 * (m_pSprite->GetWidth() + e.m_pSprite->GetWidth()); // Width of both
+	float h = 0.5 * (m_pSprite->GetHeight() + e.m_pSprite->GetHeight()); // Height of both
+	float dx = (m_x + m_pSprite->GetWidth()*0.5) - (e.m_x + e.m_pSprite->GetWidth()*0.5); // Center A.x - Center B.x
+	float dy = (m_y + m_pSprite->GetHeight()*0.5) - (e.m_y + e.m_pSprite->GetHeight()*0.5); // Center A.y - Center B.y
 
-	// W02.3: Does this object collide with the e object?
-	// W02.3: Create a circle for each entity (this and e).
+	if (abs(dx) <= w && abs(dy) <= h)
+	{
+		/* collision! */
+		float wy = w * dy;
+		float hx = h * dx;
 
-	// W02.3: Check for intersection.
-	// W02.3: Using circle-vs-circle collision detection.
+		if (wy > hx)
+		{
+			if (wy > -hx)
+			{
+				/* collision at the top */
+				return TOP;
+			}
+			else
+			{
+				/* on the left */
+				return LEFT;
+			}
+		}
+		else
+		{
+			if (wy > -hx)
+			{
+				/* on the right */
+				return RIGHT;
+			}
+			else
+			{
+				/* at the bottom */
+				return BOTTOM;
+			}
+		}
+	}
 
-	// W02.3: Return result of collision.
+	// W02.3: Generic Entity Collision routine.	
 
-	return (false); // W02.4 Change return value!
+	return NONE; // W02.4 Change return value!
 }
 
 void 

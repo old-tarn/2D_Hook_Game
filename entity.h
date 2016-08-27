@@ -8,6 +8,16 @@ class Sprite;
 
 class Entity
 {
+public:
+	typedef enum
+	{
+		LEFT,
+		RIGHT,
+		TOP,
+		BOTTOM,
+		NONE
+	} Collision;
+
 	//Member Methods:
 public:
 	Entity();
@@ -21,7 +31,7 @@ public:
 	void SetDead(bool dead);
 	bool IsDead() const;
 
-	bool IsCollidingWith(Entity& e);
+	Collision IsCollidingWith(Entity& e);
 
 	float GetPositionX();
 	float GetPositionY();
@@ -54,6 +64,11 @@ protected:
 	float m_velocityY;
 
 	bool m_dead;
+
+public:
+	bool m_canMoveRight,
+		m_canMoveLeft,
+		m_isJumping;
 
 private:
 

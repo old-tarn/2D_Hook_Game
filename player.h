@@ -1,4 +1,5 @@
 #include "entity.h"
+#include <vector>
 
 class Player : public Entity
 {
@@ -11,11 +12,9 @@ public:
 	
 	void IsOnGround(bool value);
 
-	bool GetJumping();
-
 	// Member Data
 
-
+	std::vector<Entity*> currentCollisions;
 	bool isOnGround;
 	const int gravity;
 	

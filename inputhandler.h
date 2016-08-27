@@ -4,6 +4,7 @@
 
 // Library includes:
 #include <SDL.h>
+#include <map>
 
 // Forward Declarations:
 class Game;
@@ -17,6 +18,7 @@ public:
 
 	bool Initialise();
 	void ProcessInput(Game& game);
+	void Process(Game& game);
 
 protected:
 
@@ -26,9 +28,15 @@ private:
 
 	//Member Data:
 public:
+	typedef enum{
+		LEFT,
+		RIGHT,
+		JUMP,
+	} Direction;
 
 protected:
 	SDL_Joystick* m_pGameController;
+	std::map<Direction, bool> m_pressedKeys;
 
 private:
 

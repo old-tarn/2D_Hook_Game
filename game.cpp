@@ -14,6 +14,7 @@
 // Library includes:
 #include <cassert>
 #include <SDL.h>
+#include <algorithm>
 
 // Static Members:
 Game* Game::sm_pInstance = 0;
@@ -126,16 +127,15 @@ Game::Initialise()
 	SpawnGrass(0, height/2);
 	SpawnEnter(0, (height / 2) - 50);
 
-	//SpawnEnter()
-
-
-
 	SpawnGrass(200, height - 50);
 	SpawnDamage(0, height - 50);
 	SpawnBounce(width / 2, height - 50);
-	// W02.2: Spawn four rows of 14 alien enemies.
 
-	// W02.2: Fill the container with these new enemies.
+	// Could remove grass processing: as they remain static
+	for (unsigned int i = 0; i < grass.size(); ++i)
+	{
+		grass[i]->Process(0);
+	}
 
 	m_lastTime = SDL_GetTicks();
 	m_lag = 0.0f;
@@ -158,6 +158,7 @@ Game::DoGameLoop()
 
 	assert(m_pInputHandler);
 	m_pInputHandler->ProcessInput(*this);
+	// Processes each of the key presses
 	
 	if (m_looping)
 	{
@@ -176,12 +177,18 @@ Game::DoGameLoop()
 			m_lag -= stepSize;
 
 			++m_numUpdates;
+			////// STATS //////////////
+			char buffer[255];
+			sprintf(buffer, "FPS:%i LAG:%f DT:%f EXOC:%f", m_FPS, m_lag, deltaTime, m_executionTime);
+			LogManager::GetInstance().Log(buffer);
+			/////////////////////////////
 		}
 		
 		Draw(*m_pBackBuffer);
 	}
 
 	SDL_Delay(1);
+
 
 	return (m_looping);
 }
@@ -200,13 +207,9 @@ Game::Process(float deltaTime)
 		m_frameCount = 0;
 	}
 
-	for (unsigned int i = 0; i < grass.size(); ++i)
-	{
-		grass[i]->Process(deltaTime);
-	}
-
-	PlayerIsOnGround();
-
+	// Process background movement
+	m_pBackBuffer->Process(100* deltaTime);
+	
 	// Update the game world simulation:
 
 	// Ex003.5: Process each alien enemy in the container.
@@ -214,21 +217,85 @@ Game::Process(float deltaTime)
 	// W02.3: Process each bullet in the container.
 
 	// W02.1: Update player... DONE
-	m_pPlayer->Process(deltaTime);
-	
-	
+	m_pPlayer->Process(deltaTime); 
+	m_pPlayer->isOnGround = false;
 
-	// W02.3: Check for bullet vs alien enemy collisions...
-	// W02.3: For each bullet
-	// W02.3: For each alien enemy
-	// W02.3: Check collision between two entities.
-	// W02.3: If collided, destory both and spawn explosion.
+	if (m_pPlayer->currentCollisions.size() != 0)
+	{
+		for (unsigned int i = 0; i < m_pPlayer->currentCollisions.size(); ++i)
+		{
+			Entity::Collision c;
+			c = m_pPlayer->IsCollidingWith(*m_pPlayer->currentCollisions[i]);
 
-	// W02.3: Remove any dead bullets from the container...
+			if (c == Entity::Collision::NONE)
+			{
+				m_pPlayer->currentCollisions.erase(m_pPlayer->currentCollisions.begin() + i);
+				m_pPlayer->m_canMoveLeft = true;
+				m_pPlayer->m_canMoveRight = true;
+				m_pPlayer->isOnGround = false;
+			}
+			else
+			{
+				switch (c)
+				{
+				case Entity::Collision::BOTTOM:
+					m_pPlayer->isOnGround = true;
+					break;
+				case Entity::Collision::LEFT:
+					m_pPlayer->m_canMoveRight = false;
+					break;
+				case Entity::Collision::RIGHT:
+					m_pPlayer->m_canMoveLeft = false;
+					break;
+				}
+			}
+		}
+	}
 
-	// W02.3: Remove any dead enemy aliens from the container...
 
-	// W02.3: Remove any dead explosions from the container...
+	// Check for new collisions after processing complete
+	for (unsigned int i = 0; i < grass.size(); ++i)
+	{
+		Entity::Collision c;
+		c = m_pPlayer->IsCollidingWith(*grass[i]);
+		if (c != Entity::Collision::NONE)
+		{
+			// Checks if it is already in container
+			if (std::find(m_pPlayer->currentCollisions.begin(), m_pPlayer->currentCollisions.end(), grass[i]) != m_pPlayer->currentCollisions.end()) {
+				/* currentCollision<> contains grass */
+			}
+			else {
+				m_pPlayer->currentCollisions.push_back(grass[i]);
+			}
+			
+		}
+		switch (c)
+		{
+		case  Entity::Collision::NONE:	break;
+		case  Entity::Collision::TOP: // Bumps head
+			m_pPlayer->m_isJumping = false;
+			m_pPlayer->SetPositionY(grass[i]->GetPositionY() +50);
+			m_pPlayer->SetVerticalVelocity(0);
+			break;
+		case  Entity::Collision::LEFT: // Block to the right
+			m_pPlayer->m_canMoveRight = false;
+			m_pPlayer->SetPositionX(grass[i]->GetPositionX() - 33);
+			break;
+		case  Entity::Collision::RIGHT: // Block to the left
+			m_pPlayer->m_canMoveLeft = false;
+			m_pPlayer->SetPositionX(grass[i]->GetPositionX() + 50);
+			break;
+		case  Entity::Collision::BOTTOM:
+			if (!m_pPlayer->m_isJumping)
+			{
+				m_pPlayer->SetPositionY(grass[i]->GetPositionY() - 50);
+				m_pPlayer->SetVerticalVelocity(0);
+				m_pPlayer->isOnGround = true;
+			}; 
+			break;
+			
+		}
+	}
 }
 
 void 
@@ -237,6 +304,17 @@ Game::Draw(BackBuffer& backBuffer)
 	++m_frameCount;
 
 	backBuffer.Clear();
+
+	backBuffer.DrawSpriteWithTime();
+
+	backBuffer.SetDrawColour(0, 0, 0);
+	
+	for (int height = 0; height< 600; height+= 50){
+		backBuffer.DrawLine(0, height, 800, height);
+	}
+	for (int width = 0; width< 800; width += 50){
+		backBuffer.DrawLine(width, 0, width, 600);
+	}
 
 	for (unsigned int i = 0; i < grass.size(); ++i)
 	{
@@ -263,25 +341,24 @@ void
 Game::MovePlayerLeft()
 {
 	// W02.1: Tell the player ship to move left. DONE
-	m_pPlayer->SetHorizontalVelocity(-200);
+	if (m_pPlayer->m_canMoveLeft)
+		m_pPlayer->SetHorizontalVelocity(-300);
 }
 
 // W02.1: Add the method to tell the player ship to move right... DONE
 void
 Game::MovePlayerRight()
 {
-	m_pPlayer->SetHorizontalVelocity(200);
+	if (m_pPlayer->m_canMoveRight)
+		m_pPlayer->SetHorizontalVelocity(300);
 }
 
 void
 Game::PlayerJump()
 {
-	/*if (!m_pPlayer->GetJumping())
-	{
-		m_pPlayer->Jump();
-	}*/
 	if (m_pPlayer->isOnGround)
 		m_pPlayer->isOnGround = false;
+
 		m_pPlayer->Jump();
 }
 
@@ -316,6 +393,7 @@ Game::SpawnEnemy(int x, int y)
 	// W02.2: Add the new Enemy to the enemy container.
 }
 
+// TODO: Clean up SPawning methods
 void
 Game::SpawnGrass(int x, int y)
 {
@@ -376,9 +454,12 @@ Game::SpawnBounce(int x, int y)
 	grass.push_back(tile);
 }
 
-void
+void  // DONT NEED THIS ANY MORE
 Game::PlayerIsOnGround()
 {
+	// TODO: Calculate AABB's
+	// TODO: Create a space partitioning for AABB's queries
+
 	bool collide = false;
 
 	SDL_Rect* playerRect = new SDL_Rect();
@@ -410,7 +491,7 @@ Game::PlayerIsOnGround()
 				}
 				break;
 			case Tile::BOUNCE:
-				m_pPlayer->SetVerticalVelocity(-700);
+				m_pPlayer->SetVerticalVelocity(-1200);
 				collide = false;
 				break;
 			case Tile::DAMAGE:

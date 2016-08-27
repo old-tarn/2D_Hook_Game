@@ -12,7 +12,9 @@
 InputHandler::InputHandler()
 : m_pGameController(0)
 {
-
+	m_pressedKeys[LEFT] = false;
+	m_pressedKeys[RIGHT] = false;
+	m_pressedKeys[JUMP] = false;
 }
 
 InputHandler::~InputHandler()
@@ -53,35 +55,59 @@ InputHandler::ProcessInput(Game& game)
 			{
 				//game.FireSpaceShipBullet();
 			}
-
-			// W02.1: Tell the game to move the space ship left... DONE
-
-			// W02.1: Tell the game to move the space ship right... DONE
 		}
+
 		switch (e.type)
 		{
-		case SDL_JOYBUTTONDOWN: 
-			break;
 		case SDL_KEYDOWN:
 			switch (e.key.keysym.sym)
 			{
-			case SDLK_a: game.MovePlayerLeft();
+			case SDLK_a: 
+				m_pressedKeys[LEFT] = true;
 				break;
-			case SDLK_d: game.MovePlayerRight();
+			case SDLK_d: 
+					m_pressedKeys[RIGHT] = true;
 				break;
-			case SDLK_SPACE: game.PlayerJump();
+			case SDLK_SPACE:
+					m_pressedKeys[JUMP] = true;
 				break;
 			}
 			break;
 		case SDL_KEYUP:
 			switch (e.key.keysym.sym)
 			{
-			case SDLK_a: game.StopMovement();
+			case SDLK_a:
+					m_pressedKeys[LEFT] = false;
 				break;
-			case SDLK_d: game.StopMovement();
+			case SDLK_d:
+					m_pressedKeys[RIGHT] = false;
 				break;
 			}
 			break;
 		}
+	}
+	Process(game);
+}
+
+void
+InputHandler::Process(Game& game)
+{
+	if (m_pressedKeys[LEFT])
+	{
+		game.MovePlayerLeft();
+	}
+	else if (m_pressedKeys[RIGHT])
+	{
+		game.MovePlayerRight();
+	}
+	else
+	{
+		game.StopMovement();
+	}
+
+	if (m_pressedKeys[JUMP])
+	{
+		game.PlayerJump();
+		m_pressedKeys[JUMP] = false;
 	}
 }

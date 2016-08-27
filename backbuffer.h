@@ -26,6 +26,8 @@ public:
 	void SetDrawColour(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 
 	void DrawSprite(Sprite& sprite);
+	void DrawSpriteWithTime();
+	void Process(float deltaTime);
 	void DrawRectangle(int x1, int y1, int x2, int y2);
 	void DrawLine(int x1, int y1, int x2, int y2);
 
@@ -53,6 +55,9 @@ protected:
 	unsigned char m_clearRed;
 	unsigned char m_clearGreen;
 	unsigned char m_clearBlue;
+
+	Sprite * background;
+	float BackgroundCounter;
 	
 private:
 

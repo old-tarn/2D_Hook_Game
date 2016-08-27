@@ -23,6 +23,8 @@ BackBuffer::BackBuffer()
 , m_clearRed(0xFF)
 , m_clearGreen(0xFF)
 , m_clearBlue(0xFF)
+, background(0)
+, BackgroundCounter(0)
 {
 	SetClearColour(37, 37, 38);
 }
@@ -37,6 +39,9 @@ BackBuffer::~BackBuffer()
 
 	SDL_DestroyWindow(m_pWindow);
 	m_pWindow = 0;
+
+	delete background;
+	background = 0;
 
 	IMG_Quit();
 	SDL_Quit();
@@ -127,6 +132,50 @@ BackBuffer::DrawSprite(Sprite& sprite)
 	dest.h = sprite.GetHeight();
 
 	SDL_RenderCopy(m_pRenderer, sprite.GetTexture()->GetTexture(), 0, &dest);
+}
+
+void
+BackBuffer::Process(float deltaTime)
+{
+	BackgroundCounter += deltaTime;
+}
+
+void
+BackBuffer::DrawSpriteWithTime()
+{
+	if (background == nullptr){
+		background = CreateSprite("assets\\background.png");
+		background->SetX(0);
+		background->SetY(0);
+	}
+	SDL_Rect dest;
+	dest.x = 0;
+	dest.y = 0;
+	dest.w = 800; // SIZE AND POSITION TO DISPLAY INSIDE WINDOW
+	dest.h = 600;
+
+	SDL_Rect srce;
+	srce.x = BackgroundCounter;
+	srce.y = 0;
+	srce.w = 800;	// SIZE OF TEXTURE SEGMENT
+	srce.h = 600;
+
+	//BackgroundCounter += 0.35f;
+
+	if (BackgroundCounter >= 4000)
+	{
+		BackgroundCounter = 0;
+	}
+	if (BackgroundCounter >= 1200 && BackgroundCounter <= 2000)
+		srce.x = 1200;
+	if (BackgroundCounter >= 2000)
+	{
+		srce.x = 1200 - (BackgroundCounter - 2000);
+		if (BackgroundCounter >= 3200 && BackgroundCounter <= 6000)
+			srce.x = 0;
+	}
+
+	SDL_RenderCopy(m_pRenderer, background->GetTexture()->GetTexture(), &srce, &dest);
 }
 
 void
